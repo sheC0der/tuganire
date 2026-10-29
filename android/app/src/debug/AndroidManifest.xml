@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Lets debug builds reach the local backend over plain http. Debug only, so
+         release builds never allow cleartext traffic. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

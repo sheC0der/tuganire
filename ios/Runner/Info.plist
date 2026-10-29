@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tuganire listens so you can practise speaking Kinyarwanda.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Tuganire turns your speech into text so the tutor can reply.</string>
 </dict>
 </plist>

@@ -50,3 +50,7 @@ app.*.map.json
 # Backend: secrets and dependencies
 backend/.env
 backend/node_modules/
+backend/public/
+
+# Local --dart-define-from-file values (copy dart_defines.example.json)
+dart_defines.json

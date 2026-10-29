@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/conversation_controller.dart';
 import '../models/scenario.dart';
+import '../services/auth_service.dart';
 import '../services/tutor_service.dart';
 import '../services/voice_service.dart';
 import 'chat_screen.dart';
@@ -41,7 +42,18 @@ class _SetupScreenState extends State<SetupScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
           children: [
-            Text('Tuganire', style: tt.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Tuganire', style: tt.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                IconButton(
+                  tooltip: 'Sign out',
+                  onPressed: () => context.read<AuthService>().signOut(),
+                  icon: const Icon(Icons.logout),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text('Let’s talk. Practise Kinyarwanda in real conversations with Mwarimu, your tutor.',
                 style: tt.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),

@@ -1,0 +1,100 @@
+import 'package:flutter/foundation.dart';
+
+import '../models/chat.dart';
+import '../models/scenario.dart';
+import '../services/tutor_service.dart';
+import '../services/voice_service.dart';
+
+/// Holds one conversation: the messages, whether the tutor is thinking,
+/// and the learner's display settings.
+class ConversationController extends ChangeNotifier {
+  ConversationController({
+    required this.tutor,
+    required this.voice,
+    required this.level,
+    required this.scenario,
+  });
+
+  final TutorService tutor;
+  final VoiceService voice;
+  final Level level;
+  final Scenario scenario;
+
+  final List<ChatMessage> messages = [];
+  bool isThinking = false;
+  String? error;
+  bool showTranslations = true;
+  bool readAloud = true;
+
+  bool _disposed = false;
+
+  /// The tutor opens the conversation.
+  Future<void> start() => _requestTutorTurn();
+
+  Future<void> send(String text) async {
+    final t = text.trim();
+    if (t.isEmpty || isThinking) return;
+    await voice.stop();
+    messages.add(ChatMessage.learner(t));
+    _notify();
+    await _requestTutorTurn();
+  }
+
+  /// Retries the last failed request. The learner's message is kept.
+  Future<void> retry() => _requestTutorTurn();
+
+  void speak(String text) => voice.speak(text, slow: level == Level.beginner);
+
+  void toggleTranslations() {
+    showTranslations = !showTranslations;
+    _notify();
+  }
+
+  void toggleReadAloud() {
+    readAloud = !readAloud;
+    if (!readAloud) voice.stop();
+    _notify();
+  }
+
+  Future<void> _requestTutorTurn() async {
+    if (isThinking) return;
+    isThinking = true;
+    error = null;
+    _notify();
+    try {
+      final reply = await tutor.nextTurn(
+        level: level,
+        scenarioId: scenario.id,
+        history: messages,
+      );
+      if (_disposed) return;
+      if (messages.isNotEmpty && messages.last.speaker == Speaker.learner) {
+        messages.last.feedback = reply.feedback;
+      }
+      messages.add(ChatMessage.tutor(
+        reply.replyRw,
+        translation: reply.replyEn,
+        suggestions: reply.suggestions,
+      ));
+      if (readAloud) speak(reply.replyRw);
+    } on TutorException catch (e) {
+      error = e.message;
+    } catch (_) {
+      error = 'The tutor couldn’t reply. Try again.';
+    } finally {
+      isThinking = false;
+      _notify();
+    }
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    voice.stop();
+    super.dispose();
+  }
+}

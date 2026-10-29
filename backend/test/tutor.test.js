@@ -84,3 +84,10 @@ test("supabaseTokenVerifier: invalid token -> null, outage -> AuthUnavailableErr
   });
   await assert.rejects(offline("t"), AuthUnavailableError);
 });
+
+test("the system prompt keeps the feedback and no-assumptions rules", async () => {
+  const { buildSystemPrompt } = await import("../prompt.js");
+  const prompt = buildSystemPrompt("beginner", "greet");
+  assert.match(prompt, /never start feedback with a praise word/);
+  assert.match(prompt, /Never guess the learner's nationality/);
+});

@@ -1,30 +1,46 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tuganire/main.dart';
+import 'package:tuganire/models/scenario.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Setup screen shows levels and situations', (tester) async {
+    await tester.pumpWidget(const TuganireApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Tuganire'), findsOneWidget);
+    for (final l in Level.values) {
+      expect(find.widgetWithText(ChoiceChip, l.label), findsOneWidget);
+    }
+    // The first situations are on screen; the list scrolls for the rest.
+    expect(find.text(scenarios.first.rw), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Start conversation'), 200);
+    expect(find.text('Start conversation'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('Selecting a level and a situation updates the choice', (tester) async {
+    await tester.pumpWidget(const TuganireApp());
+
+    ChoiceChip chip(Level l) => tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, l.label));
+
+    expect(chip(Level.beginner).selected, isTrue);
+    expect(find.text(Level.beginner.hint), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, Level.advanced.label));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(chip(Level.beginner).selected, isFalse);
+    expect(chip(Level.advanced).selected, isTrue);
+    expect(find.text(Level.advanced.hint), findsOneWidget);
+
+    ListTile tile(Scenario s) => tester.widget<ListTile>(find.widgetWithText(ListTile, s.rw));
+    final second = scenarios[1];
+
+    expect(tile(scenarios.first).selected, isTrue);
+    await tester.tap(find.text(second.rw));
+    await tester.pump();
+
+    expect(tile(scenarios.first).selected, isFalse);
+    expect(tile(second).selected, isTrue);
   });
 }

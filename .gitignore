@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Backend: secrets and dependencies
+backend/.env
+backend/node_modules/

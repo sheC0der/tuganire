@@ -1,0 +1,15 @@
+# Send only what the Dockerfile needs. Everything else (build output, .git,
+# .dart_tool, android/, ios/, desktop folders, tests, IDE files) stays out.
+*
+!pubspec.yaml
+!pubspec.lock
+!lib/
+!web/
+!backend/
+
+# Inside backend/: no installed modules, local builds, tests or env files.
+backend/node_modules
+backend/public
+backend/test
+**/.env
+**/.env.*

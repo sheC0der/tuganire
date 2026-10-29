@@ -5,6 +5,7 @@ import '../controllers/conversation_controller.dart';
 import '../models/chat.dart';
 import '../services/speech_service.dart';
 import '../services/voice_service.dart';
+import '../theme.dart';
 import '../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -40,7 +41,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!ok) {
         notes.add('Speaking isn’t available on this phone, so type your answers.');
       } else if (!_speech.supportsKinyarwanda) {
-        notes.add('This phone can’t recognise spoken Kinyarwanda, so the mic listens in English.');
+        notes.add(_speech.canTryKinyarwanda
+            ? 'The mic starts in English. Tap EN under it to try Kinyarwanda.'
+            : 'This phone can’t recognise spoken Kinyarwanda, so the mic listens in English.');
       }
       if (voice.quality != VoiceQuality.kinyarwanda) notes.add(voiceQualityNote(voice.quality));
       _status = notes.isEmpty ? null : notes.join(' ');
@@ -161,40 +164,46 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.separated(
-                reverse: true, // newest at the bottom, auto-scrolls as messages arrive
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 14),
-                itemBuilder: (_, i) => items[items.length - 1 - i],
-                // Keeps each bubble's state (e.g. a revealed translation) with its message
-                // as new messages shift positions in the reversed list.
-                findItemIndexCallback: (key) {
-                  final i = items.indexWhere((w) => w.key == key);
-                  return i < 0 ? null : items.length - 1 - i;
-                },
-              ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: conversationMaxWidth),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.separated(
+                    reverse: true, // newest at the bottom, auto-scrolls as messages arrive
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 14),
+                    itemBuilder: (_, i) => items[items.length - 1 - i],
+                    // Keeps each bubble's state (e.g. a revealed translation) with its message
+                    // as new messages shift positions in the reversed list.
+                    findItemIndexCallback: (key) {
+                      final i = items.indexWhere((w) => w.key == key);
+                      return i < 0 ? null : items.length - 1 - i;
+                    },
+                  ),
+                ),
+                if (_status != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                    child: Text(_status!, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  ),
+                _Composer(
+                  controller: _input,
+                  speech: _speech,
+                  speechReady: _speechReady,
+                  micKinyarwanda: _micKinyarwanda,
+                  canUseKinyarwanda: _speech.canTryKinyarwanda,
+                  onToggleMicLanguage: () => setState(() => _micKinyarwanda = !_micKinyarwanda),
+                  onMic: _toggleMic,
+                  onSend: () => _send(c),
+                  sending: c.isThinking,
+                ),
+              ],
             ),
-            if (_status != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                child: Text(_status!, style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-              ),
-            _Composer(
-              controller: _input,
-              speech: _speech,
-              speechReady: _speechReady,
-              micKinyarwanda: _micKinyarwanda,
-              canUseKinyarwanda: _speech.supportsKinyarwanda,
-              onToggleMicLanguage: () => setState(() => _micKinyarwanda = !_micKinyarwanda),
-              onMic: _toggleMic,
-              onSend: () => _send(c),
-              sending: c.isThinking,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -245,7 +254,7 @@ class _Composer extends StatelessWidget {
                   icon: Icon(listening ? Icons.stop : Icons.mic),
                 ),
               ),
-              // Which language the mic listens for. RW only when the phone supports it.
+              // Which language the mic listens for. RW when the device supports it, and always on web.
               GestureDetector(
                 onTap: canUseKinyarwanda ? onToggleMicLanguage : null,
                 child: Padding(

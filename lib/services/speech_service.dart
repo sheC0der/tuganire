@@ -16,7 +16,15 @@ class SpeechService {
   String englishLocaleId = 'en_US';
 
   bool get isReady => _ready;
+
+  /// The recogniser reported a Kinyarwanda locale.
   bool get supportsKinyarwanda => kinyarwandaLocaleId != null;
+
+  /// Browsers don't list the languages they recognise, so on web Kinyarwanda can
+  /// be tried with rw-RW anyway. If the browser can't do it, the error is shown.
+  String? get _kinyarwandaListenLocale => kinyarwandaLocaleId ?? (kIsWeb ? 'rw-RW' : null);
+
+  bool get canTryKinyarwanda => _kinyarwandaListenLocale != null;
 
   Future<bool> init() async {
     if (_ready) return true;
@@ -51,7 +59,7 @@ class SpeechService {
     await _stt.listen(
       onResult: (r) => onResult(r.recognizedWords, r.finalResult),
       listenOptions: SpeechListenOptions(
-        localeId: kinyarwanda && kinyarwandaLocaleId != null ? kinyarwandaLocaleId : englishLocaleId,
+        localeId: (kinyarwanda ? _kinyarwandaListenLocale : null) ?? englishLocaleId,
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
         partialResults: true,
@@ -63,12 +71,16 @@ class SpeechService {
 
   Future<void> stop() => _stt.stop();
 
+  // Android/iOS codes, plus the browser's Web Speech API codes on web.
   String _friendlyError(String code) => switch (code) {
-        'error_no_match' || 'error_speech_timeout' => 'I didn’t catch that. Tap the mic and try again.',
-        'error_permission' => 'Microphone permission is off. Turn it on in your phone settings.',
-        'error_network' || 'error_network_timeout' => 'Speech recognition needs internet. Check your connection.',
-        'error_language_not_supported' || 'error_language_unavailable' =>
-          'This phone can’t recognise that language. Switch the mic to English.',
+        'error_no_match' || 'error_speech_timeout' || 'no-speech' =>
+          'I didn’t catch that. Tap the mic and try again.',
+        'error_permission' || 'not-allowed' || 'service-not-allowed' || 'audio-capture' =>
+          'Microphone permission is off. Turn it on in your settings.',
+        'error_network' || 'error_network_timeout' || 'network' =>
+          'Speech recognition needs internet. Check your connection.',
+        'error_language_not_supported' || 'error_language_unavailable' || 'language-not-supported' =>
+          'This device can’t recognise that language. Switch the mic to English.',
         _ => 'Speech recognition stopped. Try again or type instead.',
       };
 }

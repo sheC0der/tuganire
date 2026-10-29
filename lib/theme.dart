@@ -8,6 +8,9 @@ class Palette {
   static const skyDark = Color(0xFF79B3D6);
 }
 
+/// The conversation is centred in a column this wide on large screens.
+const conversationMaxWidth = 720.0;
+
 ThemeData buildTheme(Brightness brightness) {
   final light = brightness == Brightness.light;
   final scheme = ColorScheme.fromSeed(

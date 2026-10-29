@@ -1,6 +1,14 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/chat.dart';
+import '../theme.dart';
+
+/// Bubbles take up to 86% of the screen, measured within the centred
+/// conversation column on wide screens.
+double _bubbleMaxWidth(BuildContext context) =>
+    math.min(MediaQuery.sizeOf(context).width, conversationMaxWidth) * 0.86;
 
 class TutorBubble extends StatelessWidget {
   const TutorBubble({
@@ -25,7 +33,7 @@ class TutorBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.86),
+        constraints: BoxConstraints(maxWidth: _bubbleMaxWidth(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,7 +146,7 @@ class LearnerBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.86),
+        constraints: BoxConstraints(maxWidth: _bubbleMaxWidth(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [

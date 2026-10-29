@@ -81,6 +81,36 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Speaks a short phrase and shows which voice the device used, to check read aloud.
+  Future<void> _testVoice() async {
+    const phrase = 'Muraho! Amakuru yawe?';
+    final voice = context.read<VoiceService>();
+    await voice.speak(phrase);
+    if (!mounted) return;
+    final info = voice.voice;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Test voice'),
+        content: Text([
+          'Said: “$phrase” (Hello! How are you?)',
+          if (info == null)
+            'No voice was found, so nothing could play.'
+          else ...[
+            'Voice: ${info.name}',
+            'Language: ${info.locale ?? 'the device’s default'}',
+            voiceQualityNote(info.quality),
+            'Voices on this device: ${info.voiceCount}',
+          ],
+        ].join('\n\n')),
+        actions: [
+          TextButton(onPressed: () => voice.speak(phrase), child: const Text('Play again')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   void _send(ConversationController c) {
     final text = _input.text;
     if (text.trim().isEmpty || c.isThinking) return;
@@ -103,6 +133,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final c = context.watch<ConversationController>();
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+
+    if (c.voiceProblem != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final problem = c.takeVoiceProblem();
+        if (problem != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
+        }
+      });
+    }
 
     final lastTutorIndex = c.messages.lastIndexWhere((m) => m.speaker == Speaker.tutor);
     final items = <Widget>[
@@ -159,6 +198,12 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: c.readAloud ? 'Turn off read aloud' : 'Turn on read aloud',
             onPressed: c.toggleReadAloud,
             icon: Icon(c.readAloud ? Icons.volume_up : Icons.volume_off),
+          ),
+          PopupMenuButton<void>(
+            tooltip: 'More',
+            itemBuilder: (_) => [
+              PopupMenuItem(onTap: _testVoice, child: const Text('Test voice')),
+            ],
           ),
         ],
       ),

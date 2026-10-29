@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/chat.dart';
@@ -13,7 +15,12 @@ class ConversationController extends ChangeNotifier {
     required this.voice,
     required this.level,
     required this.scenario,
-  });
+  }) {
+    _voiceProblems = voice.problems.listen((message) {
+      voiceProblem = message;
+      _notify();
+    });
+  }
 
   final TutorService tutor;
   final VoiceService voice;
@@ -26,7 +33,11 @@ class ConversationController extends ChangeNotifier {
   bool showTranslations = true;
   bool readAloud = true;
 
+  /// Why read aloud just failed to play. The screen shows it once via [takeVoiceProblem].
+  String? voiceProblem;
+
   bool _disposed = false;
+  late final StreamSubscription<String> _voiceProblems;
 
   /// The tutor opens the conversation.
   Future<void> start() => _requestTutorTurn();
@@ -44,6 +55,12 @@ class ConversationController extends ChangeNotifier {
   Future<void> retry() => _requestTutorTurn();
 
   void speak(String text) => voice.speak(text, slow: level == Level.beginner);
+
+  String? takeVoiceProblem() {
+    final problem = voiceProblem;
+    voiceProblem = null;
+    return problem;
+  }
 
   void toggleTranslations() {
     showTranslations = !showTranslations;
@@ -94,6 +111,7 @@ class ConversationController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _voiceProblems.cancel();
     voice.stop();
     super.dispose();
   }

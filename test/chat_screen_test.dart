@@ -22,6 +22,10 @@ class _SilentVoice implements VoiceService {
   Future<void> speak(String text, {bool slow = false}) async {}
   @override
   Future<void> stop() async {}
+  @override
+  VoiceInfo? get voice => null;
+  @override
+  Stream<String> get problems => const Stream.empty();
 }
 
 Future<void> _pumpChat(WidgetTester tester, Size screen) async {

@@ -26,9 +26,11 @@ class _SilentVoice implements VoiceService {
   VoiceInfo? get voice => null;
   @override
   Stream<String> get problems => const Stream.empty();
+  @override
+  final ValueNotifier<String?> preparing = ValueNotifier(null);
 }
 
-Future<void> _pumpChat(WidgetTester tester, Size screen) async {
+Future<_SilentVoice> _pumpChat(WidgetTester tester, Size screen) async {
   tester.view.physicalSize = screen;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -63,6 +65,7 @@ Future<void> _pumpChat(WidgetTester tester, Size screen) async {
   ));
   await tester.pumpAndSettle();
   expect(find.text('Mwaramutse! Witwa nde?'), findsOneWidget);
+  return voice;
 }
 
 void main() {
@@ -81,5 +84,21 @@ void main() {
     await _pumpChat(tester, const Size(400, 800));
 
     expect(tester.getRect(find.byType(ListView)).width, 400);
+  });
+
+  testWidgets('"Hear again" shows a spinner while that message’s audio is generated', (tester) async {
+    final voice = await _pumpChat(tester, const Size(400, 800));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    voice.preparing.value = 'Mwaramutse! Witwa nde?';
+    await tester.pump();
+    expect(
+        find.descendant(
+            of: find.widgetWithText(TextButton, 'Hear again'), matching: find.byType(CircularProgressIndicator)),
+        findsOneWidget);
+
+    voice.preparing.value = null;
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

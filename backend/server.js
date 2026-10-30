@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { createApp } from "./app.js";
 import { parseAllowedEmails, supabaseTokenVerifier } from "./auth.js";
+import { cachedSynthesizer, ttsServiceClient } from "./tts.js";
 import { requestTutorTurn } from "./tutor.js";
 
 const REQUIRED = ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "ALLOWED_EMAILS"];
@@ -24,6 +25,20 @@ if (!allowedEmails.size) {
   process.exit(1);
 }
 
+// Kinyarwanda read aloud is optional: without a TTS service the app uses the device's voice.
+const TTS_URL = process.env.TTS_URL?.trim();
+const TTS_SHARED_SECRET = process.env.TTS_SHARED_SECRET?.trim();
+if (Boolean(TTS_URL) !== Boolean(TTS_SHARED_SECRET)) {
+  console.error("Set both TTS_URL and TTS_SHARED_SECRET, or neither.");
+  process.exit(1);
+}
+const TTS_CACHE_MB = Number(process.env.TTS_CACHE_MB || 50);
+const synthesizeSpeech =
+  TTS_URL &&
+  cachedSynthesizer(ttsServiceClient({ url: TTS_URL, secret: TTS_SHARED_SECRET }), {
+    maxBytes: TTS_CACHE_MB * 1024 * 1024,
+  });
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const app = createApp({
@@ -35,6 +50,7 @@ const app = createApp({
   }),
   nextTurn: ({ level, scenarioId, history }) =>
     requestTutorTurn({ apiKey: API_KEY, model: MODEL, level, scenarioId, history }),
+  synthesizeSpeech,
   // The Docker image copies the Flutter web build here. Locally, point WEB_DIR at
   // ../build/web after `flutter build web`, or leave it and use `flutter run -d chrome`.
   webDir: path.resolve(here, process.env.WEB_DIR || "public"),
@@ -43,4 +59,5 @@ const app = createApp({
 
 app.listen(PORT, () => {
   console.log(`Tuganire backend listening on port ${PORT} using ${MODEL}`);
+  console.log(TTS_URL ? `Kinyarwanda read aloud via ${TTS_URL}` : "No TTS_URL: the app will use device voices.");
 });

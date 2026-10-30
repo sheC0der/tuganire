@@ -100,7 +100,7 @@ class _ChatScreenState extends State<ChatScreen> {
             'Voice: ${info.name}',
             'Language: ${info.locale ?? 'the device’s default'}',
             voiceQualityNote(info.quality),
-            'Voices on this device: ${info.voiceCount}',
+            if (info.voiceCount != null) 'Voices on this device: ${info.voiceCount}',
           ],
         ].join('\n\n')),
         actions: [
@@ -152,13 +152,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 message: c.messages[i],
                 showTranslation: c.showTranslations,
                 showSuggestions: i == lastTutorIndex && !c.isThinking,
+                preparingSpeech: c.preparingSpeech,
                 onSpeak: c.speak,
                 onPickSuggestion: (t) => setState(() {
                   _input.text = t;
                   _input.selection = TextSelection.collapsed(offset: t.length);
                 }),
               )
-            : LearnerBubble(key: ObjectKey(c.messages[i]), message: c.messages[i], onSpeak: c.speak),
+            : LearnerBubble(
+                key: ObjectKey(c.messages[i]),
+                message: c.messages[i],
+                preparingSpeech: c.preparingSpeech,
+                onSpeak: c.speak,
+              ),
       if (c.isThinking)
         Text('Mwarimu is thinking…',
             style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant, fontStyle: FontStyle.italic)),

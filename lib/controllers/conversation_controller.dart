@@ -20,6 +20,7 @@ class ConversationController extends ChangeNotifier {
       voiceProblem = message;
       _notify();
     });
+    voice.preparing.addListener(_notify);
   }
 
   final TutorService tutor;
@@ -35,6 +36,9 @@ class ConversationController extends ChangeNotifier {
 
   /// Why read aloud just failed to play. The screen shows it once via [takeVoiceProblem].
   String? voiceProblem;
+
+  /// The text whose audio is still being generated, so its button can show it's loading.
+  String? get preparingSpeech => voice.preparing.value;
 
   bool _disposed = false;
   late final StreamSubscription<String> _voiceProblems;
@@ -112,6 +116,7 @@ class ConversationController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _voiceProblems.cancel();
+    voice.preparing.removeListener(_notify);
     voice.stop();
     super.dispose();
   }

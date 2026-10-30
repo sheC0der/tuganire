@@ -10,12 +10,24 @@ import '../theme.dart';
 double _bubbleMaxWidth(BuildContext context) =>
     math.min(MediaQuery.sizeOf(context).width, conversationMaxWidth) * 0.86;
 
+/// The speaker icon on a read-aloud button, or a small spinner while its audio is generated.
+Widget _speakIcon(bool loading, {Color? color}) => loading
+    ? SizedBox.square(
+        dimension: 18,
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: CircularProgressIndicator(strokeWidth: 2, color: color),
+        ),
+      )
+    : Icon(Icons.volume_up_outlined, size: 18, color: color);
+
 class TutorBubble extends StatelessWidget {
   const TutorBubble({
     super.key,
     required this.message,
     required this.showTranslation,
     required this.showSuggestions,
+    this.preparingSpeech,
     required this.onSpeak,
     required this.onPickSuggestion,
   });
@@ -23,6 +35,9 @@ class TutorBubble extends StatelessWidget {
   final ChatMessage message;
   final bool showTranslation;
   final bool showSuggestions;
+
+  /// The text whose audio is being generated, if any.
+  final String? preparingSpeech;
   final void Function(String text) onSpeak;
   final void Function(String text) onPickSuggestion;
 
@@ -55,7 +70,7 @@ class TutorBubble extends StatelessWidget {
                     _Translation(text: message.translation!, initiallyShown: showTranslation),
                   TextButton.icon(
                     onPressed: () => onSpeak(message.text),
-                    icon: const Icon(Icons.volume_up_outlined, size: 18),
+                    icon: _speakIcon(preparingSpeech == message.text),
                     label: const Text('Hear again'),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -133,9 +148,10 @@ class _TranslationState extends State<_Translation> {
 }
 
 class LearnerBubble extends StatelessWidget {
-  const LearnerBubble({super.key, required this.message, required this.onSpeak});
+  const LearnerBubble({super.key, required this.message, this.preparingSpeech, required this.onSpeak});
 
   final ChatMessage message;
+  final String? preparingSpeech;
   final void Function(String text) onSpeak;
 
   @override
@@ -161,7 +177,7 @@ class LearnerBubble extends StatelessWidget {
             ),
             if (fb != null) ...[
               const SizedBox(height: 8),
-              _FeedbackCard(feedback: fb, onSpeak: onSpeak),
+              _FeedbackCard(feedback: fb, preparingSpeech: preparingSpeech, onSpeak: onSpeak),
             ],
           ],
         ),
@@ -171,8 +187,9 @@ class LearnerBubble extends StatelessWidget {
 }
 
 class _FeedbackCard extends StatelessWidget {
-  const _FeedbackCard({required this.feedback, required this.onSpeak});
+  const _FeedbackCard({required this.feedback, required this.preparingSpeech, required this.onSpeak});
   final TutorFeedback feedback;
+  final String? preparingSpeech;
   final void Function(String text) onSpeak;
 
   @override
@@ -199,7 +216,7 @@ class _FeedbackCard extends StatelessWidget {
                 style: tt.bodyLarge?.copyWith(color: fg, fontWeight: FontWeight.w600)),
             TextButton.icon(
               onPressed: () => onSpeak(feedback.corrected),
-              icon: Icon(Icons.volume_up_outlined, size: 18, color: fg),
+              icon: _speakIcon(preparingSpeech == feedback.corrected, color: fg),
               label: Text('Hear it', style: TextStyle(color: fg)),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,

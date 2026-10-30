@@ -3,6 +3,7 @@ import path from "node:path";
 import express from "express";
 
 import { LEVELS, SCENARIOS } from "./prompt.js";
+import { MAX_TTS_CHARS, TtsError, normalizeTtsText } from "./tts.js";
 import { TutorError } from "./tutor.js";
 
 /**
@@ -12,8 +13,10 @@ import { TutorError } from "./tutor.js";
  * - verifyUser(token) resolves to { id, email }, or null for an invalid token,
  *   and throws if the token can't be checked right now.
  * - nextTurn({ level, scenarioId, history }) resolves to the tutor's reply.
+ * - synthesizeSpeech(text) resolves to { audio, model } with WAV audio, or is
+ *   left out when no TTS service is configured.
  */
-export function createApp({ verifyUser, allowedEmails, nextTurn, model, webDir, dev = false }) {
+export function createApp({ verifyUser, allowedEmails, nextTurn, synthesizeSpeech, model, webDir, dev = false }) {
   const app = express();
   app.disable("x-powered-by");
 
@@ -27,7 +30,9 @@ export function createApp({ verifyUser, allowedEmails, nextTurn, model, webDir, 
   api.use(express.json({ limit: "64kb" }));
   api.get("/health", health);
 
-  api.post("/chat", requireUser(verifyUser, allowedEmails), async (req, res) => {
+  const signedIn = requireUser(verifyUser, allowedEmails);
+
+  api.post("/chat", signedIn, async (req, res) => {
     const { level, scenarioId, history } = req.body ?? {};
     // Object.hasOwn so keys like "constructor" or "__proto__" don't pass as valid ids.
     if (!Object.hasOwn(LEVELS, level) || !Object.hasOwn(SCENARIOS, scenarioId) || !Array.isArray(history)) {
@@ -38,6 +43,30 @@ export function createApp({ verifyUser, allowedEmails, nextTurn, model, webDir, 
     } catch (err) {
       if (err instanceof TutorError) {
         console.error("Tutor turn failed:", err.message);
+        return res.status(502).json({ error: err.code });
+      }
+      console.error(err);
+      return res.status(500).json({ error: "server_error" });
+    }
+  });
+
+  api.post("/tts", signedIn, async (req, res) => {
+    // The app falls back to the device's voice on any error here.
+    if (!synthesizeSpeech) return res.status(503).json({ error: "tts_not_configured" });
+    const text = typeof req.body?.text === "string" ? normalizeTtsText(req.body.text) : "";
+    if (!text) return res.status(400).json({ error: "bad_request" });
+    if (text.length > MAX_TTS_CHARS) return res.status(413).json({ error: "text_too_long" });
+    try {
+      const { audio, model: voiceModel } = await synthesizeSpeech(text);
+      res.set({
+        "content-type": "audio/wav",
+        "cache-control": "private, max-age=86400",
+        "x-tts-model": voiceModel,
+      });
+      return res.send(audio);
+    } catch (err) {
+      if (err instanceof TtsError) {
+        console.error("Speech synthesis failed:", err.message);
         return res.status(502).json({ error: err.code });
       }
       console.error(err);
@@ -107,6 +136,7 @@ function devCors(req, res, next) {
       "access-control-allow-origin": origin,
       "access-control-allow-headers": "authorization, content-type",
       "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-expose-headers": "x-tts-model",
     });
     res.vary("Origin");
     if (req.method === "OPTIONS") return res.sendStatus(204);

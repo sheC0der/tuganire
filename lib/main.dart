@@ -8,6 +8,7 @@ import 'config.dart';
 import 'screens/setup_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'services/auth_service.dart';
+import 'services/remote_voice_service.dart';
 import 'services/speech_service.dart';
 import 'services/tutor_service.dart';
 import 'services/voice_service.dart';
@@ -44,7 +45,14 @@ class TuganireApp extends StatelessWidget {
           ),
         ),
         Provider<SpeechService>(create: (_) => SpeechService()),
-        Provider<VoiceService>(create: (_) => DeviceVoiceService()..init()),
+        Provider<VoiceService>(
+          create: (_) => RemoteVoiceService(
+            baseUrl: AppConfig.backendUrl,
+            accessToken: auth.accessToken,
+            onUnauthorized: auth.signOut,
+            fallback: DeviceVoiceService(),
+          )..init(),
+        ),
       ],
       child: MaterialApp(
         title: 'Tuganire',

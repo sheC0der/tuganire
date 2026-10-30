@@ -1,0 +1,5 @@
+# torch is installed separately in the Dockerfile, from PyTorch's CPU-only index.
+fastapi==0.162.0
+uvicorn==0.54.0
+transformers==5.22.0
+numpy==2.5.4

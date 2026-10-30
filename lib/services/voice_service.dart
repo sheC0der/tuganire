@@ -15,13 +15,13 @@ class VoiceInfo {
   final String? locale;
   final VoiceQuality quality;
 
-  /// How many voices the device offers.
-  final int voiceCount;
+  /// How many voices the device offers, or null for the server's voice.
+  final int? voiceCount;
 }
 
-/// The app only talks to this interface, so you can later swap in a real
-/// Kinyarwanda voice (for example Meta MMS TTS served from your backend)
-/// without touching any screen code.
+/// The app only talks to this interface: RemoteVoiceService plays a real
+/// Kinyarwanda voice from the backend, [DeviceVoiceService] uses the device's
+/// built-in voices.
 abstract class VoiceService {
   Future<void> init();
 
@@ -36,6 +36,9 @@ abstract class VoiceService {
 
   /// Messages for the learner when read aloud can't play.
   Stream<String> get problems;
+
+  /// The text whose audio is being fetched, for a loading indicator; null when idle.
+  ValueListenable<String?> get preparing;
 }
 
 /// Picks the read-aloud voice: Kinyarwanda, then Swahili, otherwise null for the
@@ -114,6 +117,10 @@ class DeviceVoiceService implements VoiceService {
 
   @override
   Stream<String> get problems => _problems.stream;
+
+  /// Device voices start speaking straight away, so there's nothing to wait for.
+  @override
+  final ValueListenable<String?> preparing = ValueNotifier(null);
 
   @override
   Future<void> init() {
